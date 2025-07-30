@@ -1,0 +1,119 @@
+/* Additional styles for the game - imported by main.ts */
+
+/* Canvas specific styles */
+#gameCanvas {
+    cursor: crosshair;
+    transition: all 0.3s ease;
+}
+
+#gameCanvas:hover {
+    transform: scale(1.02);
+}
+
+/* Power meter animations */
+.power-fill {
+    transition: width 0.1s ease-out;
+    background: linear-gradient(90deg, 
+        #48bb78 0%,     /* Green for low power */
+        #f6e05e 50%,    /* Yellow for medium power */
+        #f56565 100%    /* Red for high power */
+    );
+}
+
+/* Game state specific styles */
+.game-ready #gameCanvas {
+    border-color: #48bb78;
+    box-shadow: 0 0 10px rgba(72, 187, 120, 0.3);
+}
+
+.game-aiming #gameCanvas {
+    border-color: #f6e05e;
+    box-shadow: 0 0 10px rgba(246, 224, 94, 0.3);
+}
+
+.game-flying #gameCanvas {
+    border-color: #4299e1;
+    box-shadow: 0 0 10px rgba(66, 153, 225, 0.3);
+}
+
+.game-hit #gameCanvas {
+    border-color: #48bb78;
+    box-shadow: 0 0 20px rgba(72, 187, 120, 0.6);
+    animation: hit-pulse 0.5s ease-out;
+}
+
+.game-miss #gameCanvas {
+    border-color: #f56565;
+    box-shadow: 0 0 20px rgba(245, 101, 101, 0.6);
+    animation: miss-shake 0.5s ease-out;
+}
+
+/* Animations */
+@keyframes hit-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes miss-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Loading animation for when game is initializing */
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.loading::after {
+    content: '...';
+    animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    #gameCanvas {
+        cursor: pointer; /* Better for touch devices */
+    }
+    
+    .power-meter {
+        font-size: 1.1rem;
+    }
+    
+    .instructions {
+        font-size: 0.9rem;
+    }
+}
+
+/* High DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    #gameCanvas {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* Focus styles for accessibility */
+.reset-btn:focus {
+    outline: 3px solid #4299e1;
+    outline-offset: 2px;
+}
+
+/* Print styles (hide game when printing) */
+@media print {
+    .game-container {
+        display: none;
+    }
+}

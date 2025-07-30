@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💩 Toilet Toss - Physics Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <header>
+            <h1>💩 Toilet Toss</h1>
+            <div class="game-info">
+                <div class="score">Score: <span id="score">0</span></div>
+                <div class="attempts">Attempts: <span id="attempts">0</span></div>
+            </div>
+        </header>
+        
+        <main>
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <div class="controls">
+                <div class="power-meter">
+                    <label>Power:</label>
+                    <div class="power-bar">
+                        <div id="powerFill" class="power-fill"></div>
+                    </div>
+                    <span id="powerValue">0%</span>
+                </div>
+                
+                <div class="instructions">
+                    <p>Hold <strong>SPACE</strong> or <strong>CLICK</strong> to charge power</p>
+                    <p>Release to launch the 💩 into the 🚽</p>
+                </div>
+                
+                <button id="resetButton" class="reset-btn">Reset Game</button>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
