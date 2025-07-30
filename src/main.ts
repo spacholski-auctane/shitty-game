@@ -107,8 +107,8 @@ console.log(`
 🚽💩 TOILET TOSS GAME 💩🚽
 ========================
 Controls:
-- Hold SPACE or CLICK to charge power
-- Move mouse to aim
+- Use ← → arrow keys to aim
+- Hold SPACE to charge power
 - Release to fire!
 
 Debug info will appear in development mode.

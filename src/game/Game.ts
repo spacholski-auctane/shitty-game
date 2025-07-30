@@ -50,9 +50,17 @@ export class Game {
     private scoreElement: HTMLElement | null;
     private attemptsElement: HTMLElement | null;
     
-    // Background image
+    // Background images
     private backgroundImage!: HTMLImageElement;
+    private dirtyBackgroundImage!: HTMLImageElement;
     private imageLoaded: boolean = false;
+    private dirtyImageLoaded: boolean = false;
+    private useDirtyBackground: boolean = false;
+    private dirtyBackgroundTimer: number | null = null;
+    
+    // Start point image
+    private startPointImage!: HTMLImageElement;
+    private startPointImageLoaded: boolean = false;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -69,8 +77,11 @@ export class Game {
             gravity: Physics.GRAVITY,
             maxPower: 100,
             targetPosition: new Vector2D(400, 335), // Przesunięte o kolejne 5px w dół
-            startPosition: new Vector2D(400, 550)
+            startPosition: new Vector2D(400, 550) // Tymczasowa pozycja
         };
+        
+        // Ustaw losową pozycję startową po zainicjalizowaniu config
+        this.config.startPosition = this.getRandomStartPosition();
         
         // Initialize game objects
         this.projectile = new Projectile(
@@ -92,7 +103,7 @@ export class Game {
         // Initialize input
         this.isCharging = false;
         this.chargePower = 0;
-        this.currentAngle = 45; // Default angle
+        this.currentAngle = 45; // Domyślny kąt - można zmieniać strzałkami
         this.keys = new Set();
         
         // Initialize timing
@@ -108,6 +119,8 @@ export class Game {
         this.setupCanvas();
         this.setupEventListeners();
         this.loadBackgroundImage();
+        this.loadDirtyBackgroundImage();
+        this.loadStartPointImage();
         this.updateUI();
     }
 
@@ -152,6 +165,17 @@ export class Game {
             e.preventDefault();
             this.startCharging();
         }
+        
+        // Sterowanie kątem strzałkami
+        if (e.code === 'ArrowLeft') {
+            e.preventDefault();
+            this.adjustAngle(-2); // Obrót w lewo o 2 stopnie
+        }
+        
+        if (e.code === 'ArrowRight') {
+            e.preventDefault();
+            this.adjustAngle(2); // Obrót w prawo o 2 stopnie
+        }
     }
 
     private handleKeyUp(e: KeyboardEvent): void {
@@ -163,6 +187,11 @@ export class Game {
         }
     }
 
+    // Dostosuj kąt celowania
+    private adjustAngle(delta: number): void {
+        this.currentAngle = Math.max(0, Math.min(180, this.currentAngle + delta));
+    }
+
     private handleMouseDown(_e: MouseEvent): void {
         this.startCharging();
     }
@@ -172,13 +201,8 @@ export class Game {
     }
 
     private handleMouseMove(e: MouseEvent): void {
-        // Calculate angle based on mouse position
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        
-        const mousePos = new Vector2D(mouseX, mouseY);
-        this.currentAngle = Physics.calculateAngleToTarget(this.config.startPosition, mousePos);
+        // Wyłączone sterowanie myszą - używamy strzałek
+        // Można zostawić puste lub usunąć całkowicie
     }
 
     private handleTouchStart(e: TouchEvent): void {
@@ -278,6 +302,19 @@ export class Game {
         this.state = GameState.HIT;
         this.score++;
         this.target.onHit();
+        this.useDirtyBackground = true; // Zmień tło na brudne po trafieniu
+        
+        // Wyczyść poprzedni timer jeśli istnieje
+        if (this.dirtyBackgroundTimer) {
+            clearTimeout(this.dirtyBackgroundTimer);
+        }
+        
+        // Ustaw timer na 3 sekundy, po których wróci czyste tło
+        this.dirtyBackgroundTimer = window.setTimeout(() => {
+            this.useDirtyBackground = false;
+            this.dirtyBackgroundTimer = null;
+        }, 3000);
+        
         this.updateUI();
         this.updateCanvasClass();
     }
@@ -288,12 +325,41 @@ export class Game {
     }
 
     private resetForNextShot(): void {
+        // Losowa nowa pozycja startowa przy każdym resecie
+        this.config.startPosition = this.getRandomStartPosition();
         this.projectile.reset(this.config.startPosition.x, this.config.startPosition.y);
         this.target.reset();
         this.state = GameState.READY;
         this.chargePower = 0;
+        // Brudne tło zostaje - timer sam je wyczyści po 3s
         this.updateCanvasClass();
         this.updateUI();
+    }
+
+    // Generuje losową pozycję startową na skraju gry
+    private getRandomStartPosition(): Vector2D {
+        const margin = 20; // Margines od krawędzi
+        const side = Math.floor(Math.random() * 3); // 0=dół, 1=lewa, 2=prawa
+        
+        switch (side) {
+            case 0: // Dół
+                return new Vector2D(
+                    margin + Math.random() * (this.config.canvasWidth - 2 * margin),
+                    this.config.canvasHeight - margin
+                );
+            case 1: // Lewa strona
+                return new Vector2D(
+                    margin,
+                    margin + Math.random() * (this.config.canvasHeight - 2 * margin)
+                );
+            case 2: // Prawa strona
+                return new Vector2D(
+                    this.config.canvasWidth - margin,
+                    margin + Math.random() * (this.config.canvasHeight - 2 * margin)
+                );
+            default:
+                return new Vector2D(400, 550); // Fallback
+        }
     }
 
     private updateCanvasClass(): void {
@@ -329,6 +395,9 @@ export class Game {
         this.target.render(this.ctx);
         this.projectile.render(this.ctx);
         
+        // Draw start point image
+        this.renderStartPoint();
+        
         // Draw aiming line
         if (this.state === GameState.AIMING) {
             this.renderAimingLine();
@@ -346,9 +415,33 @@ export class Game {
         this.backgroundImage.src = '/assets/kibelek.jpg';
     }
 
+    private loadDirtyBackgroundImage(): void {
+        this.dirtyBackgroundImage = new Image();
+        this.dirtyBackgroundImage.onload = () => {
+            this.dirtyImageLoaded = true;
+        };
+        this.dirtyBackgroundImage.src = '/assets/brudny_kibelek.png';
+    }
+
+    private loadStartPointImage(): void {
+        this.startPointImage = new Image();
+        this.startPointImage.onload = () => {
+            this.startPointImageLoaded = true;
+        };
+        this.startPointImage.src = '/assets/ChatGPT%20Image%20Jul%2030,%202025,%2002_38_34%20PM%20(1).png';
+    }
+
     private renderBackground(): void {
-        if (this.imageLoaded) {
-            // Rysuj obraz jako tło
+        if (this.useDirtyBackground && this.dirtyImageLoaded) {
+            // Rysuj brudny kibelek po trafieniu
+            this.ctx.drawImage(
+                this.dirtyBackgroundImage,
+                0, 0,
+                this.config.canvasWidth,
+                this.config.canvasHeight
+            );
+        } else if (this.imageLoaded) {
+            // Rysuj czysty kibelek
             this.ctx.drawImage(
                 this.backgroundImage,
                 0, 0,
@@ -356,7 +449,7 @@ export class Game {
                 this.config.canvasHeight
             );
         } else {
-            // Fallback gradient jeśli obraz się nie załadował
+            // Fallback gradient jeśli obrazy się nie załadowały
             const gradient = this.ctx.createLinearGradient(0, 0, 0, this.config.canvasHeight);
             gradient.addColorStop(0, '#87CEEB'); // Sky blue
             gradient.addColorStop(1, '#98FB98'); // Pale green
@@ -392,7 +485,7 @@ export class Game {
         
         switch (this.state) {
             case GameState.READY:
-                message = 'Hold SPACE or CLICK to aim';
+                message = 'Use ← → arrows to aim, SPACE to charge power';
                 break;
             case GameState.AIMING:
                 message = `Power: ${Math.round(this.chargePower)}% - Release to fire!`;
@@ -424,10 +517,39 @@ export class Game {
         }
     }
 
+    private renderStartPoint(): void {
+        if (this.startPointImageLoaded) {
+            const imageSize = 40; // Rozmiar obrazu start point
+            this.ctx.drawImage(
+                this.startPointImage,
+                this.config.startPosition.x - imageSize / 2,
+                this.config.startPosition.y - imageSize / 2,
+                imageSize,
+                imageSize
+            );
+        } else {
+            // Fallback - mały czerwony okrąg
+            this.ctx.save();
+            this.ctx.fillStyle = 'red';
+            this.ctx.beginPath();
+            this.ctx.arc(this.config.startPosition.x, this.config.startPosition.y, 5, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.restore();
+        }
+    }
+
     public resetGame(): void {
         this.stop();
         this.score = 0;
         this.attempts = 0;
+        
+        // Wyczyść timer i resetuj tło do czystego
+        if (this.dirtyBackgroundTimer) {
+            clearTimeout(this.dirtyBackgroundTimer);
+            this.dirtyBackgroundTimer = null;
+        }
+        this.useDirtyBackground = false;
+        
         this.resetForNextShot();
         this.updateUI();
         this.start();
